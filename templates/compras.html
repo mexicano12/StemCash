@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>StemCash - Compras e Insumos</title>
+</head>
+<body>
+    <aside class="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" class="sidebar-logo">
+        <nav class="nav-menu">
+             <a href="/" class="nav-item">📊 Dashboard</a>
+            <a href="/inventario" class="nav-item">📦 Inventario</a>
+            <a href="/compras" class="nav-item active">🛒 Compras</a>
+            <a href="/ventas" class="nav-item">💰 Ventas</a>
+            <a href="/reportes" class="nav-item">📈 Reportes</a>
+            <a href="/historial" class="nav-item {{ 'active' if request.path == '/historial' else '' }}">📜 Historial</a>
+            <div style="margin-top: auto; border-top: 1px solid #f0f2f5; padding-top: 15px;">
+                <a href="{{ url_for('configuracion') }}" class="nav-item">⚙️ Configuración</a>
+            </div>
+            <div style="margin-top: auto; padding: 20px; border-top: 1px solid #eee;">
+                <a href="/logout" style="text-decoration: none; color: #ef4444; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 10px;">
+                    <span>🚪</span> Cerrar Sesión
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <<main class="main-content">
+    <div class="container-pro">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h2 style="margin: 0;">🛒 Registro de Compras (Entradas)</h2>
+            <div style="background: #e0f2fe; color: #0369a1; padding: 8px 15px; border-radius: 12px; font-weight: bold; font-size: 13px;">
+                Costo promedio stock: ${{ "{:,.2f}".format(valor_total_stock) }}
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 30px; border-top: 4px solid #3b82f6;">
+            <form action="/registrar_compra" method="POST" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; align-items: end;">
+                <div>
+                    <label class="label" style="font-size: 11px; margin-bottom: 8px; display: block;">PRODUCTO / INSUMO</label>
+                    <select name="producto_id" class="input-pro" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd;">
+                        <option value="">Selecciona un producto...</option>
+                        {% for p in productos %}
+                            <option value="{{ p.id }}">{{ p.nombre }} (Stock: {{ p.stock }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="label" style="font-size: 11px; margin-bottom: 8px; display: block;">CANTIDAD</label>
+                    <input type="number" name="cantidad" step="0.1" value="1" class="input-pro" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd;">
+                </div>
+                <div>
+                    <label class="label" style="font-size: 11px; margin-bottom: 8px; display: block;">COSTO TOTAL ($)</label>
+                    <input type="number" name="costo_total" step="0.01" placeholder="0.00" class="input-pro" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-weight: bold;">
+                </div>
+                <button type="submit" class="btn-pro" style="background: #3b82f6; color: white; padding: 13px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                    📥 Registrar Compra
+                </button>
+            </form>
+        </div>
+
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 20px; border-bottom: 1px solid #f0f2f5; background: #fafafa;">
+                <h3 style="margin: 0; font-size: 15px; color: #475569;">📋 Historial de Abastecimiento</h3>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; background: #f8fafc; color: #64748b; font-size: 11px; text-transform: uppercase;">
+                            <th style="padding: 15px 20px;">Fecha</th>
+                            <th style="padding: 15px 20px;">Producto</th>
+                            <th style="padding: 15px 20px;">Cantidad</th>
+                            <th style="padding: 15px 20px;">Costo Unitario</th>
+                            <th style="padding: 15px 20px; text-align: right;">Costo Total</th>
+                            <th style="padding: 15px 20px; text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historial %}
+                        <tr style="border-bottom: 1px solid #f1f5f9; transition: 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                            <td style="padding: 15px 20px; font-size: 13px; color: #94a3b8;">{{ h.fecha.strftime('%d %b, %H:%M') }}</td>
+                            <td style="padding: 15px 20px;">
+                                <div style="font-weight: bold; color: #1e293b;">{{ h.producto.nombre }}</div>
+                                <div style="font-size: 10px; color: #64748b;">ID: #{{ h.id }}</div>
+                            </td>
+                            <td style="padding: 15px 20px;">
+                                <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 12px;">+{{ h.cantidad }}</span>
+                            </td>
+                            <td style="padding: 15px 20px; color: #64748b; font-size: 13px;">
+                                ${{ "{:,.2f}".format(h.monto_total / h.cantidad) if h.cantidad > 0 else 0 }}
+                            </td>
+                            <td style="padding: 15px 20px; text-align: right; font-weight: 800; color: #ef4444;">
+                                ${{ "{:,.2f}".format(h.monto_total) }}
+                            </td>
+                            <td style="padding: 15px 20px; text-align: center;">
+                                <a href="{{ url_for('eliminar_compra', id=h.id) }}" onclick="return confirm('¿Eliminar esta compra? El stock se restará.')" style="text-decoration: none; font-size: 16px;">🗑️</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" style="padding: 40px; text-align: center; color: #94a3b8;">No hay registros de compras recientes.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+    <script>
+        function toggleNuevoProducto() {
+            const selector = document.getElementById('producto_selector');
+            const seccionNuevo = document.getElementById('seccion_nuevo');
+            
+            if (selector.value === 'nuevo') {
+                seccionNuevo.style.display = 'block';
+            } else {
+                seccionNuevo.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

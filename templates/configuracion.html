@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>StemCash - Configuración</title>
+</head>
+<body>
+   <aside class="sidebar">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="StemCash" class="sidebar-logo">
+    <nav class="nav-menu">
+        <a href="/" class="nav-item {{ 'active' if request.path == '/' else '' }}">📊 Dashboard</a>
+        
+        <a href="/inventario" class="nav-item {{ 'active' if request.path == '/inventario' else '' }}">📦 Inventario</a>
+        
+        <a href="/compras" class="nav-item {{ 'active' if request.path == '/compras' else '' }}">🛒 Compras</a>
+        
+        <a href="/ventas" class="nav-item {{ 'active' if request.path == '/ventas' else '' }}">💰 Ventas</a>
+        
+        <a href="/reportes" class="nav-item {{ 'active' if request.path == '/reportes' else '' }}">📈 Reportes</a>
+        
+        <a href="/historial" class="nav-item {{ 'active' if request.path == '/historial' else '' }}">📜 Historial</a>
+
+        <div style="margin-top: auto; border-top: 1px solid #f0f2f5; padding-top: 15px;">
+            <a href="{{ url_for('configuracion') }}" class="nav-item {{ 'active' if request.path == '/configuracion' else '' }}">⚙️ Configuración</a>
+        </div>
+        
+        <div style="padding: 20px; border-top: 1px solid #eee;">
+            <a href="/logout" style="text-decoration: none; color: #ef4444; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 10px;">
+                <span>🚪</span> Cerrar Sesión
+            </a>
+        </div>
+    </nav>
+</aside>
+    <main class="main-content">
+        <div class="container-pro">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div style="padding: 15px; background: #e8f5e9; color: #2e7d32; border-radius: 12px; margin-bottom: 20px; border: 1px solid #c8e6c9; display: flex; align-items: center; gap: 10px;">
+                    <span>✅</span> {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <h2>⚙️ Configuración de Familia</h2>
+            
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="card" style="background: #2d6a4f; color: white; padding: 30px; border-radius: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; margin-bottom: 5px;">ID DE FAMILIA</h3>
+                        <span style="font-size: 56px; font-weight: 900; display: block; margin-bottom: 5px;">#{{ familia.id }}</span>
+                        <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin-bottom: 20px;">Usa este ID para invitar a tu equipo.</p>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 15px;">
+                        <p style="font-size: 12px; font-weight: bold; margin-bottom: 10px;">📲 INVITACIÓN RÁPIDA</p>
+                        
+                        {% set url_base = request.host_url.rstrip('/') %}
+                        {% set url_invitacion = url_base ~ "/unirse/" ~ familia.id %}
+                        {% set mensaje_wa = "¡Hola! Únete a mi equipo en StemCash para llevar las finanzas juntos: " ~ url_invitacion %}
+
+                        <div style="display: flex; gap: 10px; flex-direction: column;">
+                            <a href="https://wa.me/?text={{ mensaje_wa|urlencode }}" target="_blank" 
+                               style="background: #25D366; color: white; text-decoration: none; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <span>💬</span> Enviar por WhatsApp
+                            </a>
+                            
+                            <button onclick="copiarLink('{{ url_invitacion }}')" 
+                                    style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 10px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                🔗 Copiar Link de Invitación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>👥 Miembros del Equipo</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        {% for m in miembros %}
+                        <li style="padding: 15px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>{{ m.nombre }}</strong> 
+                                <span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">{{ m.rol|upper }}</span>
+                                <br><small style="color: gray;">{{ m.email }}</small>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px;">
+                                <select onchange="location.href='/cambiar_rol/{{ m.id }}/' + this.value" style="padding: 5px; border-radius: 5px; border: 1px solid #ddd; font-size: 12px;">
+                                    <option value="miembro" {{ 'selected' if m.rol == 'miembro' }}>Miembro</option>
+                                    <option value="admin" {{ 'selected' if m.rol == 'admin' }}>Admin</option>
+                                </select>
+                                {% if m.id != current_user.id %}
+                                <a href="{{ url_for('eliminar_miembro', id=m.id) }}" onclick="return confirm('¿Eliminar usuario?')" style="text-decoration:none; background:#ffebee; color:#c62828; padding:8px; border-radius:8px;">🗑️</a>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <h3>➕ Dar de alta manualmente</h3>
+                <form action="/invitar_miembro" method="POST" class="responsive-form">
+                    <div class="form-group"><label class="label">Nombre</label><input type="text" name="nombre" required></div>
+                    <div class="form-group"><label class="label">Email</label><input type="email" name="email" required></div>
+                    <div class="form-group"><label class="label">Pass Temporal</label><input type="password" name="password" required></div>
+                    <button type="submit" class="btn btn-primary-inv">Registrar</button>
+                </form>
+            </div>
+
+            <div class="card danger-zone">
+                <h3 style="color: #c62828; margin-top: 0;">⚠️ Zona de Peligro</h3>
+                <p>Esta acción borrará permanentemente todos tus datos. No se puede deshacer.</p>
+                <form action="/eliminar_mi_cuenta_y_familia" method="POST" onsubmit="return confirm('¿BORRAR TODO PERMANENTEMENTE?')">
+                    <button type="submit" class="btn-danger-full">
+                        Eliminar mi Familia y mi Cuenta
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function copiarLink(texto) {
+            navigator.clipboard.writeText(texto).then(() => {
+                alert("✅ Link de invitación copiado al portapapeles.");
+            });
+        }
+    </script>
+</body>
+</html>

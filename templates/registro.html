@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StemCash - {{ 'Unirse a Familia' if familia_invitada else 'Crear mi Familia' }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --success: #10b981;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+        }
+
+        .reg-card {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 24px; color: #111827; margin: 10px 0; }
+        .header p { color: #6b7280; font-size: 14px; }
+
+        .invitation-banner {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #f3f4f6;
+            padding-bottom: 5px;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 14px; }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-reg {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .footer-link { text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280; }
+        .footer-link a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        
+        .alert {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .alert-danger { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+
+    <div class="reg-card">
+        <div class="header">
+            <div style="font-size: 40px;">{{ '🤝' if familia_invitada else '🚀' }}</div>
+            <h1>{{ '¡Te han invitado!' if familia_invitada else 'Bienvenido a StemCash' }}</h1>
+            <p>{{ 'Únete al equipo y gestionen juntos el negocio.' if familia_invitada else 'Comienza a gestionar tus negocios hoy mismo.' }}</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="/registro" method="POST">
+            
+            {% if familia_invitada %}
+                <div class="invitation-banner">
+                    <span style="font-size: 12px; color: #166534; font-weight: 600;">ESTÁS UNIÉNDOTE A:</span>
+                    <div style="font-size: 18px; color: #15803d; font-weight: 800; margin-top: 5px;">
+                        {{ familia_invitada.nombre }}
+                    </div>
+                </div>
+            {% else %}
+                <div class="section-title">Tu Negocio / Familia</div>
+                <div class="form-group">
+                    <label>Nombre de la Familia</label>
+                    <input type="text" name="nombre_familia" placeholder="Ej. Familia Pérez o Velas Ceravette" required>
+                </div>
+            {% endif %}
+
+            <div class="section-title">Tus Datos Personales</div>
+            <div class="form-group">
+                <label>Nombre Completo</label>
+                <input type="text" name="nombre_usuario" placeholder="Ej. Erick" required>
+            </div>
+
+            <div class="form-group">
+                <label>Correo Electrónico</label>
+                <input type="email" name="email" placeholder="correo@ejemplo.com" required>
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" name="password" placeholder="Mínimo 6 caracteres" required>
+            </div>
+
+            <button type="submit" class="btn-reg">
+                {{ 'Unirse al Equipo' if familia_invitada else 'Crear mi Familia' }}
+            </button>
+        </form>
+
+        <div class="footer-link">
+            ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>StemCash - Inventario</title>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="StemCash" class="sidebar-logo">
+        <nav class="nav-menu">
+             <a href="/" class="nav-item">📊 Dashboard</a>
+             <a href="/inventario" class="nav-item active">📦 Inventario</a>
+             <a href="/compras" class="nav-item">🛒 Compras</a>
+             <a href="/ventas" class="nav-item {{ 'active' if request.path == '/ventas' else '' }}">💰 Ventas</a>
+             <a href="/reportes" class="nav-item">📈 Reportes</a>
+             <a href="/historial" class="nav-item {{ 'active' if request.path == '/historial' else '' }}">📜 Historial</a>
+
+             <div style="margin-top: auto; border-top: 1px solid #f0f2f5; padding-top: 15px;">
+                <a href="{{ url_for('configuracion') }}" class="nav-item">⚙️ Configuración</a>          
+             </div>
+             <div style="margin-top: auto; padding: 20px; border-top: 1px solid #eee;">
+                <a href="/logout" style="text-decoration: none; color: #ef4444; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 10px;">
+                    <span>🚪</span> Cerrar Sesión
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="container-pro">
+            
+            <div class="header-top" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0;">Gestión de Inventario</h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin: 5px 0 0 0;">Control de stock y activos</p>
+                </div>
+                <button onclick="abrirModalProducto()" class="btn btn-income" style="flex: none; padding: 12px 25px; width: auto;">
+                    + Nuevo Producto
+                </button>
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; margin: 30px 0;">
+                <div class="card">
+                    <div class="label">SKUs Totales</div>
+                    <div class="value" style="font-size: 28px;">{{ productos|length }}</div>
+                </div>
+                <div class="card">
+                    <div class="label">Valor en Almacén</div>
+                    <div class="value" style="font-size: 28px; color: var(--primary);">
+                        ${{ "{:,.2f}".format(valor_total_stock) }}
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="label">Retorno Esperado</div>
+                    <div class="value" style="font-size: 28px; color: var(--success);">
+                        ${{ "{:,.2f}".format(ganancia_potencial) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <table class="table-mov" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #fcfcfc; border-bottom: 2px solid #f0f2f5; text-align: left;">
+                            <th style="padding: 20px; font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Producto</th>
+                            <th style="padding: 20px; font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Stock</th>
+                            <th style="padding: 20px; font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Costo</th>
+                            <th style="padding: 20px; font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Precio Venta</th>
+                            <th style="padding: 20px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in productos %}
+                        <tr style="border-bottom: 1px solid #f8f9fa;">
+                            <td style="padding: 20px;">
+                                <strong style="color: var(--text-main); font-size: 15px;">{{ p.nombre }}</strong><br>
+                                <small style="color: var(--text-muted);">{{ p.descripcion or 'Sin descripción' }}</small>
+                            </td>
+                            <td style="padding: 20px;">
+                                {% set stock_f = p.stock|float %}
+                                
+                                {# Definimos los colores del semáforo #}
+                                {% if stock_f < 2.0 %}
+                                    {# ROJO: Crítico #}
+                                    {% set bg = '#ffebee' %}{% set txt = '#c62828' %}{% set label = 'CRÍTICO 🚨' %}
+                                {% elif stock_f <= 3.0 %}
+                                    {# AMARILLO: Preventivo #}
+                                    {% set bg = '#fff9c4' %}{% set txt = '#827717' %}{% set label = 'BAJO ⚠️' %}
+                                {% else %}
+                                    {# VERDE: Suficiente #}
+                                    {% set bg = '#e8f5e9' %}{% set txt = '#2e7d32' %}{% set label = 'OK ✅' %}
+                                {% endif %}
+
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                    <span style="background: {{ bg }}; color: {{ txt }}; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 14px; min-width: 90px; text-align: center; border: 1px solid {{ txt }}33;">
+                                        {{ "{:,.3f}".format(stock_f) }}
+                                    </a>
+                                    <small style="font-size: 9px; font-weight: 900; color: {{ txt }}; text-transform: uppercase;">
+                                        {{ label }}
+                                    </small>
+                                </div>
+                            </td>
+                            <td style="padding: 20px; font-weight: 600;">${{ "{:,.2f}".format(p.precio_compra|float) }}</td>
+                            <td style="padding: 20px; font-weight: 600;">${{ "{:,.2f}".format(p.precio_venta|float) }}</td>
+                            <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end; padding: 15px 20px;">
+                                <button onclick="abrirModalEditarProducto('{{ p.id }}', '{{ p.nombre }}', '{{ p.precio_compra }}', '{{ p.precio_venta }}', '{{ p.stock }}')" 
+                                        style="border:none; background:#f0f2f5; padding:10px; border-radius:10px; cursor:pointer;" title="Editar">
+                                    ✏️
+                                </button>
+                                
+                                <a href="{{ url_for('eliminar_producto', id=p.id) }}" 
+                                onclick="return confirm('¿Seguro? Se borrará el producto y su historial.')"
+                                style="text-decoration:none; background:#ffebee; padding:10px; border-radius:10px; cursor:pointer;" title="Eliminar">
+                                    🗑️
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="padding: 60px; text-align: center; color: var(--text-muted);">
+                                <div style="font-size: 40px; margin-bottom: 10px;">📦</div>
+                                No hay productos registrados.<br>Comienza agregando los productos de tu hermana.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+   <div id="modal-producto" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+    <div class="card" style="width:90%; max-width:450px; background:white; padding:30px; border-radius:20px;">
+        <h2 style="margin-top:0; font-weight: 800; color: var(--primary);">Nuevo Producto 📦</h2>
+        
+        <form action="/crear_producto" method="POST" enctype="multipart/form-data">
+    <div style="margin-bottom:15px;">
+        <label class="label">Nombre del Producto</label>
+        <input type="text" name="nombre" placeholder="Ej. Bistec de Res o Vela Lavanda" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+    </div>
+
+    <div style="margin-bottom:15px;">
+        <label class="label">Descripción (Opcional)</label>
+        <input type="text" name="descripcion" placeholder="Ej. Corte suave o Frasco 250g" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label class="label">Stock Inicial (Kg o Pzs)</label>
+                    <input type="number" name="stock" value="0" step="any" min="0" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label class="label">Precio Venta ($)</label>
+                    <input type="number" name="precio_venta" placeholder="0.00" step="0.01" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label class="label">Costo de Compra ($)</label>
+                <input type="number" name="precio_compra" placeholder="¿Cuánto te costó?" step="0.01" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+                <small style="color: gray; font-size: 11px;">Importante para calcular la ganancia real de tu hermana.</small>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label class="label">Imagen del Producto</label>
+                <input type="file" name="imagen" accept="image/*">
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label class="label">Categoría</label>
+                    <input type="text" name="categoria_prod" placeholder="Ej. Carnes o Velas" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label class="label">Marca / Origen</label>
+                    <input type="text" name="plataforma" placeholder="Ej. Ganadería Local" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <div style="display:flex; gap:15px;">
+                <button type="button" onclick="cerrarModalProducto()" class="btn" style="background:#f0f2f5; color: #666; flex: 1;">Cancelar</button>
+                <button type="submit" class="btn" style="background:var(--primary); color:white; flex: 1;">Crear Producto</button>
+            </div>
+        </form>
+                </div>
+            </div>
+ <div id="modal-venta" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+    <div class="card" style="width:90%; max-width:400px; background:white; padding:30px; border-radius:20px;">
+        <h2 id="venta-titulo" style="margin-top:0; color: var(--success);">Registrar Venta 💰</h2>
+        <form action="/vender_producto" method="POST">
+            <input type="hidden" name="producto_id" id="venta_prod_id">
+            
+            <div style="margin-bottom:15px;">
+                <label class="label">Cantidad a vender</label>
+                <input type="number" name="cantidad" value="1" min="1" step="1" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;">
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label class="label">Precio de Venta Unitario ($)</label>
+                <input type="number" name="precio_venta" id="venta_precio_sugerido" step="0.01" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; font-size:18px; font-weight:bold;">
+            </div>
+
+            <div style="display:flex; gap:15px;">
+                <button type="button" onclick="cerrarModalVenta()" class="btn" style="background:#f0f2f5;">Cancelar</button>
+                <button type="submit" class="btn" style="background:var(--success); color:white;">Confirmar Venta</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div id="modal-editar-prod" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+    <div class="card" style="width:90%; max-width:400px; background:white; padding:25px; border-radius:20px;">
+        <h3>Editar Producto</h3>
+        <form action="/editar_producto" method="POST">
+            <input type="hidden" name="id" id="edit_prod_id">
+            <div style="margin-bottom:15px;">
+                <label class="label">Nombre</label>
+                <input type="text" name="nombre" id="edit_prod_nombre" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                <div>
+                    <label class="label">Costo ($)</label>
+                    <input type="number" name="precio_compra" id="edit_prod_costo" step="0.01" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                </div>
+                <div>
+                    <label class="label">Venta ($)</label>
+                    <input type="number" name="precio_venta" id="edit_prod_venta" step="0.01" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                </div>
+            </div>
+            <div>
+                <label class="label">Stock Actual</label>
+                <input type="number" name="stock" id="edit_prod_stock" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button type="button" onclick="document.getElementById('modal-editar-prod').style.display='none'" class="btn" style="background:#eee;">Cancelar</button>
+                <button type="submit" class="btn btn-income">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+    <script>
+
+        function abrirModalEditarProducto(id, nombre, costo, venta, stock) {
+            document.getElementById('modal-editar-prod').style.display = 'flex';
+            document.getElementById('edit_prod_id').value = id;
+            document.getElementById('edit_prod_nombre').value = nombre;
+            document.getElementById('edit_prod_costo').value = costo;
+            document.getElementById('edit_prod_venta').value = venta;
+            document.getElementById('edit_prod_stock').value = stock;
+        }
+        function abrirModalProducto() {
+            document.getElementById('modal-producto').style.display = 'flex';
+        }
+        function cerrarModalProducto() {
+            document.getElementById('modal-producto').style.display = 'none';
+        }
+        // Cerrar al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal-producto');
+            if (event.target == modal) cerrarModalProducto();
+        }
+        function abrirModalVenta(id, nombre, precio) {
+        document.getElementById('modal-venta').style.display = 'flex';
+        document.getElementById('venta_prod_id').value = id;
+        document.getElementById('venta-titulo').innerText = 'Vender ' + nombre;
+        document.getElementById('venta_precio_sugerido').value = precio;
+            }
+            function cerrarModalVenta() {
+                document.getElementById('modal-venta').style.display = 'none';
+            }
+
+     window.onclick = function(event) {
+    const modalProd = document.getElementById('modal-producto');
+    const modalEdit = document.getElementById('modal-editar-prod');
+    const modalVenta = document.getElementById('modal-venta');
+    
+    if (event.target == modalProd) cerrarModalProducto();
+    if (event.target == modalEdit) modalEdit.style.display = 'none';
+    if (event.target == modalVenta) cerrarModalVenta();
+}
+    </script>
+</body>
+</html>
