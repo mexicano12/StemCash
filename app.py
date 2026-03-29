@@ -875,7 +875,6 @@ def eliminar_movimiento(id):
     flash("Registro eliminado con éxito.", "success")
     return redirect(url_for('dashboard'))
 @app.route('/historial')
-@app.route('/historial')
 @login_required
 def historial():
     f_id = current_user.familia_id
@@ -886,11 +885,11 @@ def historial():
     mes_filtro = request.args.get('mes', ahora_mx.month, type=int)
     anio_filtro = ahora_mx.year
 
-    # Usamos CAST para asegurar que SQLite entienda la comparación de fechas
+    # ✅ CORRECCIÓN MAESTRA: Usamos 'extract' porque 'strftime' no existe en Postgres
     todos_los_movimientos = Movimiento.query.filter(
         Movimiento.familia_id == f_id,
-        func.strftime('%m', Movimiento.fecha) == f"{mes_filtro:02d}",
-        func.strftime('%Y', Movimiento.fecha) == str(anio_filtro)
+        extract('month', Movimiento.fecha) == mes_filtro,
+        extract('year', Movimiento.fecha) == anio_filtro
     ).order_by(Movimiento.fecha.desc()).all()
     
     gasto_mes = sum(m.monto for m in todos_los_movimientos if m.tipo == 'egreso')
