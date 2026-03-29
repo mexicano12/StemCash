@@ -28,7 +28,7 @@ class Usuario(db.Model, UserMixin):
     rol = db.Column(db.String(20), default='miembro') 
     nombre = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(512), nullable=False)
     familia_id = db.Column(db.Integer, db.ForeignKey('familia.id'), nullable=False)
     
     # Relación con productos que este usuario específico dio de alta
