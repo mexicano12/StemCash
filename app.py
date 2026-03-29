@@ -10,6 +10,7 @@ from datetime import datetime, date, timedelta # Añadí timedelta que lo usamos
 # Asegúrate de que models.py esté en la misma carpeta
 from models import db, Familia, Usuario, Movimiento, Categoria, Producto, MovimientoInventario, PagoPendiente
 
+
 # --- 2. CONFIGURACIÓN DE RUTAS Y CARPETAS ---
 basedir = os.path.abspath(os.path.dirname(__file__))
 # Cambiamos a una ruta relativa más amigable para Render
@@ -36,6 +37,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # --- 4. INICIALIZACIÓN DE EXTENSIONES ---
 db.init_app(app)
+with app.app_context():
+    db.create_all()
+    print("Base de datos actualizada en la nube")
 migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
