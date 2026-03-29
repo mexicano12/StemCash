@@ -85,92 +85,73 @@ from datetime import datetime, timedelta
 @login_required
 def dashboard():
     f_id = current_user.familia_id
-    
-    # --- 🌍 CONFIGURACIÓN DE TIEMPO (MÉXICO) ---
     zona_mx = pytz.timezone('America/Mexico_City')
     ahora_mx = datetime.now(zona_mx)
-    hoy_str = ahora_mx.strftime('%Y-%m-%d')
-    
-    # Rangos de tiempo
     hoy_date = ahora_mx.date()
-    inicio_semana = (hoy_date - timedelta(days=hoy_date.weekday())).strftime('%Y-%m-%d')
-    inicio_mes = hoy_date.replace(day=1).strftime('%Y-%m-%d')
+    
+    # Filtros de tiempo compatibles con Postgres y SQLite
+    inicio_semana = hoy_date - timedelta(days=hoy_date.weekday())
+    inicio_mes = hoy_date.replace(day=1)
 
-    # 1. CÁLCULOS DE BALANCE REAL
+    # 1. Balances Totales
     ingresos_totales = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, Movimiento.tipo == 'ingreso').scalar() or 0
-        
     gastos_totales = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso').scalar() or 0
-    
     balance = ingresos_totales - gastos_totales
 
-    # 2. CÁLCULOS DE TARJETAS
+    # 2. Cálculos de hoy (CORREGIDO: Sin strftime)
     gastado_hoy = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, 
         Movimiento.tipo == 'egreso',
-        func.strftime('%Y-%m-%d', Movimiento.fecha) == hoy_str
+        cast(Movimiento.fecha, Date) == hoy_date
     ).scalar() or 0
 
     gastado_semana = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id,
         Movimiento.tipo == 'egreso',
-        func.strftime('%Y-%m-%d', Movimiento.fecha) >= inicio_semana
+        cast(Movimiento.fecha, Date) >= inicio_semana
     ).scalar() or 0
 
     ingresos_mes = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id,
         Movimiento.tipo == 'ingreso',
-        func.strftime('%Y-%m-%d', Movimiento.fecha) >= inicio_mes
+        cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
     
     gastos_mes = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id,
         Movimiento.tipo == 'egreso',
-        func.strftime('%Y-%m-%d', Movimiento.fecha) >= inicio_mes
+        cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
 
-    # 3. VALOR DEL INVENTARIO
+    # 3. Inventario y Ganancias
     productos = Producto.query.filter_by(familia_id=f_id).all()
     valor_inventario_calculado = sum((p.stock or 0) * (p.precio_compra or 0) for p in productos)
 
-    # --- 4. GANANCIA REAL DE HOY ---
+    # Ganancia Real de Hoy (CORREGIDO)
     ventas_hoy = MovimientoInventario.query.join(Producto).filter(
         MovimientoInventario.tipo.ilike('salida'),
         Producto.familia_id == f_id,
-        func.strftime('%Y-%m-%d', MovimientoInventario.fecha) == hoy_str
+        cast(MovimientoInventario.fecha, Date) == hoy_date
     ).all()
 
     ganancia_hoy = sum(v.monto_total - ((v.producto.precio_compra or 0) * v.cantidad) for v in ventas_hoy)
     num_ventas_hoy = len(ventas_hoy)
 
-    # --- 🆕 5. AGENDA DE PAGOS PENDIENTES ---
-    # Traemos los pagos pendientes ordenados por la fecha de vencimiento más cercana
-    pendientes = PagoPendiente.query.filter_by(
-        familia_id=f_id, 
-        estatus='pendiente'
-    ).order_by(PagoPendiente.fecha_limite.asc()).all()
-    
+    # 4. Pagos Pendientes
+    pendientes = PagoPendiente.query.filter_by(familia_id=f_id, estatus='pendiente').order_by(PagoPendiente.fecha_limite.asc()).all()
     total_deuda = sum(p.monto for p in pendientes)
 
-    # 6. LISTA DE MOVIMIENTOS
     movimientos = Movimiento.query.filter_by(familia_id=f_id).order_by(Movimiento.id.desc()).limit(10).all()
     categorias = Categoria.query.filter_by(familia_id=f_id).all()
 
     return render_template('dashboard.html', 
-                           balance_total=balance, 
-                           ingresos_mes=ingresos_mes, 
-                           gastos_mes=gastos_mes,
-                           gastado_hoy=gastado_hoy,
-                           gastado_semana=gastado_semana,
-                           valor_inventario=valor_inventario_calculado,
-                           ganancia_hoy=ganancia_hoy,
-                           num_ventas=num_ventas_hoy,
-                           user=current_user,
-                           movimientos=movimientos,
-                           categorias=categorias,
-                           pendientes=pendientes,       # <--- Enviamos a la plantilla
-                           total_deuda=total_deuda)     # <--- Enviamos a la plantilla
+                           balance_total=balance, ingresos_mes=ingresos_mes, gastos_mes=gastos_mes,
+                           gastado_hoy=gastado_hoy, gastado_semana=gastado_semana,
+                           valor_inventario=valor_inventario_calculado, ganancia_hoy=ganancia_hoy,
+                           num_ventas=num_ventas_hoy, user=current_user, movimientos=movimientos,
+                           categorias=categorias, pendientes=pendientes, total_deuda=total_deuda)
 @app.route('/registrar', methods=['POST'])
 @login_required
 def registrar():
