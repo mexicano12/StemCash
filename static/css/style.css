@@ -119,9 +119,51 @@ input:focus {
     color: #64748b;
     text-transform: uppercase;
 }
-/* --- AJUSTES PARA CELULARES (Pantallas menores a 768px) --- */
+/* --- AJUSTES PARA CELULARES (CORREGIDO) --- */
 @media (max-width: 768px) {
     
+    body {
+        flex-direction: column; /* Apila el menú arriba del contenido */
+        height: auto;
+        overflow-x: hidden; /* Evita que la pantalla se mueva de lado */
+    }
+
+    .sidebar {
+        width: 100%; /* El menú ocupa todo el ancho arriba */
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e4e6eb;
+        padding: 10px;
+        flex-shrink: 0;
+    }
+
+    .sidebar-logo {
+        max-height: 50px; /* Logo más pequeño en celular */
+        margin-bottom: 15px;
+    }
+
+    .nav-menu {
+        display: flex;
+        overflow-x: auto; /* Permite deslizar los botones del menú de lado */
+        white-space: nowrap;
+        padding-bottom: 5px;
+        gap: 5px;
+    }
+
+    .nav-item {
+        padding: 10px 15px;
+        margin-bottom: 0;
+        font-size: 13px;
+        flex-shrink: 0; /* Para que los botones no se aplasten */
+    }
+
+    .main-content {
+        width: 100%;
+        padding: 15px;
+        margin-left: 0 !important;
+        overflow-x: hidden;
+    }
+
     /* 1. Convertir las filas de 2 o 3 tarjetas en una sola columna */
     .grid, [style*="display: grid"] {
         grid-template-columns: 1fr !important; 
@@ -133,59 +175,14 @@ input:focus {
         grid-template-columns: 1fr !important;
     }
 
-    /* 3. Hacer que las tablas se puedan desplazar lateralmente */
-    .card {
-        overflow-x: auto; /* Permite deslizar la tabla con el dedo */
+    /* Ajuste de valores para que no se salgan del cuadro */
+    .value {
+        font-size: 28px; 
     }
 
-    /* 4. Ajustar el Menú Lateral (Opcional: puedes hacerlo horizontal abajo) */
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        padding: 10px;
-    }
-    
-    .main-content {
-        margin-left: 0 !important; /* Quita el espacio del menú lateral */
-        padding: 15px;
-    }
-
-    /* 5. Los botones de Registro/Ingreso en el Dashboard uno tras otro */
+    /* 5. Los botones de Registro/Ingreso uno tras otro */
     .btn-group {
         flex-direction: column;
+        gap: 10px;
     }
 }
-.tabs-container {
-        display: inline-flex;
-        background: #f1f3f5;
-        padding: 4px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-    }
-
-    .tab-btn {
-        padding: 8px 20px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-        color: #64748b;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    /* Pestaña activa */
-    .tab-btn.active {
-        background: white;
-        color: #1e293b;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .tab-btn:hover:not(.active) {
-        background: rgba(0,0,0,0.05);
-    }
