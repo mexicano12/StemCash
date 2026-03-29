@@ -76,62 +76,6 @@ with app.app_context():
 # --- RUTAS ---
 
 
-¡Listo, Erick! He integrado tu función dashboard corregida con el resto de las rutas que mencionaste que necesitabas recuperar. Este código ya incluye las traducciones de strftime a cast y extract para que StemCash funcione perfecto en Render.
-
-Copia todo este bloque y reemplaza tu archivo app.py en GitHub:
-
-Python
-import os
-import pytz
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_migrate import Migrate
-from sqlalchemy import func, cast, Date, extract, text
-from datetime import datetime, date, timedelta
-from werkzeug.utils import secure_filename
-
-# --- 1. IMPORTACIÓN DE MODELOS ---
-from models import db, Familia, Usuario, Movimiento, Categoria, Producto, MovimientoInventario, PagoPendiente
-
-# --- 2. CONFIGURACIÓN ---
-basedir = os.path.abspath(os.path.dirname(__file__))
-UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads', 'productos')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-app = Flask(__name__)
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'stemcash_secret_2026_pro')
-db_url = os.environ.get('DATABASE_URL')
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///' + os.path.join(basedir, 'instance', 'stemcash.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# --- 3. INICIALIZACIÓN ---
-db.init_app(app)
-migrate = Migrate(app, db)
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return Usuario.query.get(int(user_id))
-
-with app.app_context():
-    db.create_all()
-    print("✅ Base de datos sincronizada")
-
-# --- 4. RUTAS PRINCIPALES ---
-
 @app.route('/')
 @login_required
 def dashboard():
@@ -140,49 +84,69 @@ def dashboard():
     ahora_mx = datetime.now(zona_mx)
     hoy_date = ahora_mx.date()
     
+    # Filtros de tiempo compatibles con Postgres y SQLite
     inicio_semana = hoy_date - timedelta(days=hoy_date.weekday())
     inicio_mes = hoy_date.replace(day=1)
 
+    # 1. Balances Totales
     ingresos_totales = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, Movimiento.tipo == 'ingreso').scalar() or 0
     gastos_totales = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso').scalar() or 0
     balance = ingresos_totales - gastos_totales
 
-    # Cálculos compatibles con Postgres
+    # 2. Cálculos de hoy (CORREGIDO: Sin strftime)
     gastado_hoy = db.session.query(func.sum(Movimiento.monto)).filter(
-        Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso',
-        cast(Movimiento.fecha, Date) == hoy_date).scalar() or 0
+        Movimiento.familia_id == f_id, 
+        Movimiento.tipo == 'egreso',
+        cast(Movimiento.fecha, Date) == hoy_date
+    ).scalar() or 0
 
     gastado_semana = db.session.query(func.sum(Movimiento.monto)).filter(
-        Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso',
-        cast(Movimiento.fecha, Date) >= inicio_semana).scalar() or 0
+        Movimiento.familia_id == f_id,
+        Movimiento.tipo == 'egreso',
+        cast(Movimiento.fecha, Date) >= inicio_semana
+    ).scalar() or 0
 
     ingresos_mes = db.session.query(func.sum(Movimiento.monto)).filter(
-        Movimiento.familia_id == f_id, Movimiento.tipo == 'ingreso',
-        cast(Movimiento.fecha, Date) >= inicio_mes).scalar() or 0
+        Movimiento.familia_id == f_id,
+        Movimiento.tipo == 'ingreso',
+        cast(Movimiento.fecha, Date) >= inicio_mes
+    ).scalar() or 0
     
     gastos_mes = db.session.query(func.sum(Movimiento.monto)).filter(
-        Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso',
-        cast(Movimiento.fecha, Date) >= inicio_mes).scalar() or 0
+        Movimiento.familia_id == f_id,
+        Movimiento.tipo == 'egreso',
+        cast(Movimiento.fecha, Date) >= inicio_mes
+    ).scalar() or 0
 
+    # 3. Inventario y Ganancias
     productos = Producto.query.filter_by(familia_id=f_id).all()
     valor_inventario_calculado = sum((p.stock or 0) * (p.precio_compra or 0) for p in productos)
 
+    # Ganancia Real de Hoy (CORREGIDO)
     ventas_hoy = MovimientoInventario.query.join(Producto).filter(
-        MovimientoInventario.tipo.ilike('salida'), Producto.familia_id == f_id,
-        cast(MovimientoInventario.fecha, Date) == hoy_date).all()
+        MovimientoInventario.tipo.ilike('salida'),
+        Producto.familia_id == f_id,
+        cast(MovimientoInventario.fecha, Date) == hoy_date
+    ).all()
 
     ganancia_hoy = sum(v.monto_total - ((v.producto.precio_compra or 0) * v.cantidad) for v in ventas_hoy)
-    
+    num_ventas_hoy = len(ventas_hoy)
+
+    # 4. Pagos Pendientes
     pendientes = PagoPendiente.query.filter_by(familia_id=f_id, estatus='pendiente').order_by(PagoPendiente.fecha_limite.asc()).all()
+    total_deuda = sum(p.monto for p in pendientes)
+
     movimientos = Movimiento.query.filter_by(familia_id=f_id).order_by(Movimiento.id.desc()).limit(10).all()
     categorias = Categoria.query.filter_by(familia_id=f_id).all()
 
-    return render_template('dashboard.html', balance_total=balance, ingresos_mes=ingresos_mes, gastos_mes=gastos_mes,
-                           gastado_hoy=gastado_hoy, gastado_semana=gastado_semana, valor_inventario=valor_inventario_calculado,
-                           ganancia_hoy=ganancia_hoy, num_ventas=len(ventas_hoy), user=current_user, movimientos=movimientos,
-                           categorias=categorias, pendientes=pendientes, total_deuda=sum(p.monto for p in pendientes))
+    return render_template('dashboard.html', 
+                           balance_total=balance, ingresos_mes=ingresos_mes, gastos_mes=gastos_mes,
+                           gastado_hoy=gastado_hoy, gastado_semana=gastado_semana,
+                           valor_inventario=valor_inventario_calculado, ganancia_hoy=ganancia_hoy,
+                           num_ventas=num_ventas_hoy, user=current_user, movimientos=movimientos,
+                           categorias=categorias, pendientes=pendientes, total_deuda=total_deuda)
 @app.route('/registrar', methods=['POST'])
 @login_required
 def registrar():
@@ -614,7 +578,7 @@ def reportes():
     gastos_totales_cash = db.session.query(func.sum(Movimiento.monto)).filter_by(
         familia_id=f_id, tipo='egreso').scalar() or 0
 
-    # 4. GASTOS POR CATEGORÍA
+    # 4. GASTOS POR CATEGORÍA (Para la Gráfica de Dona)
     gastos_cat_query = db.session.query(
         Categoria.nombre, func.sum(Movimiento.monto)
     ).join(Movimiento).filter(
@@ -624,7 +588,7 @@ def reportes():
     labels_gastos = [g[0] for g in gastos_cat_query]
     valores_gastos = [float(g[1]) for g in gastos_cat_query]
 
-    # 5. RENDIMIENTO POR MARCA/PLATAFORMA
+    # 5. RENDIMIENTO POR MARCA/PLATAFORMA (Gráfica de Barras Actual)
     ventas_agrupadas = db.session.query(
         Producto.plataforma, 
         func.sum(MovimientoInventario.monto_total)
@@ -635,7 +599,8 @@ def reportes():
 
     stats_categorias = [(cat if cat else "General", float(monto)) for cat, monto in ventas_agrupadas]
 
-    # --- 🏆 6. EL RANKING DE ORO: UTILIDAD NETA (CORREGIDO PARA POSTGRES) ---
+    # --- 🏆 6. EL RANKING DE ORO: UTILIDAD NETA POR PRODUCTO (NUEVO) ---
+    # Calculamos: (Venta total - (Costo Compra * Cantidad)) para cada producto
     ranking_query = db.session.query(
         Producto.nombre,
         func.sum(MovimientoInventario.monto_total - (Producto.precio_compra * MovimientoInventario.cantidad)).label('ganancia_neta'),
@@ -648,16 +613,16 @@ def reportes():
     labels_oro = [r[0] for r in ranking_query]
     valores_oro = [float(r[1]) for r in ranking_query]
 
-    # 7. GANANCIA REAL TOTAL
+    # 7. CÁLCULOS FINALES Y GANANCIA REAL TOTAL
+    # Usamos la suma de las utilidades de todas las ventas
     ganancia_total_real = db.session.query(
         func.sum(MovimientoInventario.monto_total - (Producto.precio_compra * MovimientoInventario.cantidad))
     ).join(Producto).filter(
         MovimientoInventario.tipo.ilike('salida'), Producto.familia_id == f_id
     ).scalar() or 0
 
-    # Cálculos de porcentajes
-    porcentaje = (float(total_recuperado) / float(total_inversion) * 100) if total_inversion > 0 else 0
-    faltante = max(0, float(total_inversion) - float(total_recuperado))
+    porcentaje = (total_recuperado / total_inversion * 100) if total_inversion > 0 else 0
+    faltante = max(0, total_inversion - total_recuperado)
 
     return render_template('reportes.html', 
                            inversion=total_inversion,
@@ -672,9 +637,9 @@ def reportes():
                            labels_g=labels_gastos,
                            valores_g=valores_gastos,
                            stats_categorias=stats_categorias,
-                           labels_oro=labels_oro,
-                           valores_oro=valores_oro,
-                           ranking_oro=ranking_query,
+                           labels_oro=labels_oro,      # <--- NUEVO
+                           valores_oro=valores_oro,    # <--- NUEVO
+                           ranking_oro=ranking_query,  # <--- NUEVO
                            user=current_user)
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
@@ -910,6 +875,7 @@ def eliminar_movimiento(id):
     flash("Registro eliminado con éxito.", "success")
     return redirect(url_for('dashboard'))
 @app.route('/historial')
+@app.route('/historial')
 @login_required
 def historial():
     f_id = current_user.familia_id
@@ -920,11 +886,11 @@ def historial():
     mes_filtro = request.args.get('mes', ahora_mx.month, type=int)
     anio_filtro = ahora_mx.year
 
-    # ✅ CORRECCIÓN: Reemplazamos strftime por extract para compatibilidad con Postgres
+    # Usamos CAST para asegurar que SQLite entienda la comparación de fechas
     todos_los_movimientos = Movimiento.query.filter(
         Movimiento.familia_id == f_id,
-        extract('month', Movimiento.fecha) == mes_filtro,
-        extract('year', Movimiento.fecha) == anio_filtro
+        func.strftime('%m', Movimiento.fecha) == f"{mes_filtro:02d}",
+        func.strftime('%Y', Movimiento.fecha) == str(anio_filtro)
     ).order_by(Movimiento.fecha.desc()).all()
     
     gasto_mes = sum(m.monto for m in todos_los_movimientos if m.tipo == 'egreso')
@@ -1045,4 +1011,3 @@ def pagar_ahora(id):
     return redirect(url_for('dashboard'))
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
-
