@@ -94,7 +94,7 @@ def dashboard():
         Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso').scalar() or 0
     balance = ingresos_totales - gastos_totales
 
-    # 2. Cálculos de hoy, semana y mes
+    # 2. Cálculos de hoy y semana
     gastado_hoy = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, 
         Movimiento.tipo == 'egreso',
@@ -113,16 +113,13 @@ def dashboard():
         cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
     
-    # --- CAMBIO AQUÍ: Separación de Gastos del Mes ---
-    
-    # Total gastos del mes
+    # --- NUEVOS CÁLCULOS DE GASTOS SEPARADOS ---
     gastos_mes_total = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id,
         Movimiento.tipo == 'egreso',
         cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
 
-    # Gastos que son específicamente de la categoría 'Inventario'
     gastos_inventario = db.session.query(func.sum(Movimiento.monto)).join(Categoria).filter(
         Movimiento.familia_id == f_id,
         Movimiento.tipo == 'egreso',
@@ -130,30 +127,31 @@ def dashboard():
         cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
 
-    # Gastos personales (Lo que queda después de quitar inventario)
     gastos_personales = gastos_mes_total - gastos_inventario
 
     # 3. Inventario y Ganancias
     productos = Producto.query.filter_by(familia_id=f_id).all()
     valor_inventario_calculado = sum((p.stock or 0) * (p.precio_compra or 0) for p in productos)
 
-    # Ganancia Real de Hoy
+    # --- NUEVOS CÁLCULOS DE VENTA TOTAL VS GANANCIA ---
     ventas_hoy = MovimientoInventario.query.join(Producto).filter(
         MovimientoInventario.tipo.ilike('salida'),
         Producto.familia_id == f_id,
         cast(MovimientoInventario.fecha, Date) == hoy_date
     ).all()
 
+    total_vendido_hoy = sum(v.monto_total for v in ventas_hoy)
     ganancia_hoy = sum(v.monto_total - ((v.producto.precio_compra or 0) * v.cantidad) for v in ventas_hoy)
     num_ventas_hoy = len(ventas_hoy)
 
-    # 4. Pagos Pendientes
+    # 4. Pagos Pendientes y Otros
     pendientes = PagoPendiente.query.filter_by(familia_id=f_id, estatus='pendiente').order_by(PagoPendiente.fecha_limite.asc()).all()
     total_deuda = sum(p.monto for p in pendientes)
 
     movimientos = Movimiento.query.filter_by(familia_id=f_id).order_by(Movimiento.id.desc()).limit(10).all()
     categorias = Categoria.query.filter_by(familia_id=f_id).all()
 
+    # RETORNO CON TODAS TUS VARIABLES ORIGINALES + LAS NUEVAS
     return render_template('dashboard.html', 
                            balance_total=balance, 
                            ingresos_mes=ingresos_mes, 
@@ -163,6 +161,7 @@ def dashboard():
                            gastado_hoy=gastado_hoy, 
                            gastado_semana=gastado_semana,
                            valor_inventario=valor_inventario_calculado, 
+                           total_vendido_hoy=total_vendido_hoy,
                            ganancia_hoy=ganancia_hoy,
                            num_ventas=num_ventas_hoy, 
                            user=current_user, 
