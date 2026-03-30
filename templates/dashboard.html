@@ -60,10 +60,15 @@
                 <div class="value" style="color: var(--success); font-size: 24px;">+${{ "{:,.2f}".format(ingresos_mes) }}</div>
             </div>
             <div class="card" style="border-left: 5px solid var(--danger);">
-                <div class="label">GASTOS DEL MES</div>
-                <div class="value" style="color: var(--danger); font-size: 24px;">-${{ "{:,.2f}".format(gastos_mes) }}</div>
+                <span class="label">Gastos del Mes</span>
+                <div class="value" style="color: var(--danger);">-${{ "{:,.2f}".format(gastos_mes) }}</div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.85em;">
+                    <span style="color: var(--text-muted);">📦 Inventario: <b>${{ "{:,.2f}".format(gastos_inventario) }}</b></span>
+                    <span style="color: var(--text-muted);">🏠 Personales: <b>${{ "{:,.2f}".format(gastos_personales) }}</b></span>
+                </div>
             </div>
-            <div class="card" style="border-left: 5px solid #f39c12; background: #fffcf5;">
+             <div class="card" style="border-left: 5px solid #f39c12; background: #fffcf5;">
                 <div class="label" style="color: #d35400;">VALOR EN INVENTARIO 📦</div>
                 <div class="value" style="color: #e67e22; font-size: 24px;">${{ "{:,.2f}".format(valor_inventario) }}</div>
             </div>
