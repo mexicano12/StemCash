@@ -75,7 +75,6 @@ with app.app_context():
 
 # --- RUTAS ---
 
-
 @app.route('/')
 @login_required
 def dashboard():
@@ -95,7 +94,7 @@ def dashboard():
         Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso').scalar() or 0
     balance = ingresos_totales - gastos_totales
 
-    # 2. Cálculos de hoy (CORREGIDO: Sin strftime)
+    # 2. Cálculos de hoy, semana y mes
     gastado_hoy = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, 
         Movimiento.tipo == 'egreso',
@@ -114,17 +113,31 @@ def dashboard():
         cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
     
-    gastos_mes = db.session.query(func.sum(Movimiento.monto)).filter(
+    # --- CAMBIO AQUÍ: Separación de Gastos del Mes ---
+    
+    # Total gastos del mes
+    gastos_mes_total = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id,
         Movimiento.tipo == 'egreso',
         cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
 
+    # Gastos que son específicamente de la categoría 'Inventario'
+    gastos_inventario = db.session.query(func.sum(Movimiento.monto)).join(Categoria).filter(
+        Movimiento.familia_id == f_id,
+        Movimiento.tipo == 'egreso',
+        Categoria.nombre.ilike('Inventario'),
+        cast(Movimiento.fecha, Date) >= inicio_mes
+    ).scalar() or 0
+
+    # Gastos personales (Lo que queda después de quitar inventario)
+    gastos_personales = gastos_mes_total - gastos_inventario
+
     # 3. Inventario y Ganancias
     productos = Producto.query.filter_by(familia_id=f_id).all()
     valor_inventario_calculado = sum((p.stock or 0) * (p.precio_compra or 0) for p in productos)
 
-    # Ganancia Real de Hoy (CORREGIDO)
+    # Ganancia Real de Hoy
     ventas_hoy = MovimientoInventario.query.join(Producto).filter(
         MovimientoInventario.tipo.ilike('salida'),
         Producto.familia_id == f_id,
@@ -142,11 +155,21 @@ def dashboard():
     categorias = Categoria.query.filter_by(familia_id=f_id).all()
 
     return render_template('dashboard.html', 
-                           balance_total=balance, ingresos_mes=ingresos_mes, gastos_mes=gastos_mes,
-                           gastado_hoy=gastado_hoy, gastado_semana=gastado_semana,
-                           valor_inventario=valor_inventario_calculado, ganancia_hoy=ganancia_hoy,
-                           num_ventas=num_ventas_hoy, user=current_user, movimientos=movimientos,
-                           categorias=categorias, pendientes=pendientes, total_deuda=total_deuda)
+                           balance_total=balance, 
+                           ingresos_mes=ingresos_mes, 
+                           gastos_mes=gastos_mes_total,
+                           gastos_inventario=gastos_inventario,
+                           gastos_personales=gastos_personales,
+                           gastado_hoy=gastado_hoy, 
+                           gastado_semana=gastado_semana,
+                           valor_inventario=valor_inventario_calculado, 
+                           ganancia_hoy=ganancia_hoy,
+                           num_ventas=num_ventas_hoy, 
+                           user=current_user, 
+                           movimientos=movimientos,
+                           categorias=categorias, 
+                           pendientes=pendientes, 
+                           total_deuda=total_deuda)
 @app.route('/registrar', methods=['POST'])
 @login_required
 def registrar():
