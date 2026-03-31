@@ -599,27 +599,35 @@ def reportes():
         MovimientoInventario.tipo.ilike('salida'), Producto.familia_id == f_id
     ).scalar() or 0
 
-    # --- 🏆 NUEVA SECCIÓN: RENDIMIENTO POR PERIODOS ---
+    # --- 🏆 SECCIÓN MODIFICADA: RENDIMIENTO POR PERIODOS (Añadido conteo) ---
     def obtener_stats_periodo(filtro_fecha):
-        # Venta Bruta
-        venta = db.session.query(func.sum(MovimientoInventario.monto_total)).join(Producto).filter(
-            MovimientoInventario.tipo.ilike('salida'), 
-            Producto.familia_id == f_id,
-            filtro_fecha
-        ).scalar() or 0
-        # Ganancia Real (Venta - Costo)
-        ganancia = db.session.query(
+        # Consulta optimizada: obtenemos Venta Bruta y Ganancia Real en una sola ejecución
+        stats = db.session.query(
+            func.sum(MovimientoInventario.monto_total),
             func.sum(MovimientoInventario.monto_total - (Producto.precio_compra * MovimientoInventario.cantidad))
         ).join(Producto).filter(
             MovimientoInventario.tipo.ilike('salida'), 
             Producto.familia_id == f_id,
             filtro_fecha
-        ).scalar() or 0
-        return float(venta), float(ganancia)
+        ).first() # .first() nos devuelve una tupla (venta, ganancia)
 
-    v_hoy, g_hoy = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) == hoy)
-    v_semana, g_semana = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) >= inicio_semana)
-    v_mes, g_mes = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) >= inicio_mes)
+        # Consulta para CONTAR el número de ventas (operaciones) en el periodo
+        conteo_ventas = MovimientoInventario.query.join(Producto).filter(
+            MovimientoInventario.tipo.ilike('salida'),
+            Producto.familia_id == f_id,
+            filtro_fecha
+        ).count()
+
+        venta_total = stats[0] or 0
+        ganancia_real = stats[1] or 0
+        
+        # Retornamos los 3 valores: Venta, Ganancia y Número de Ventas
+        return float(venta_total), float(ganancia_real), conteo_ventas
+
+    # --- MODIFICACIÓN: Ahora recibimos 3 variables por cada periodo ---
+    v_hoy, g_hoy, n_hoy = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) == hoy)
+    v_semana, g_semana, n_semana = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) >= inicio_semana)
+    v_mes, g_mes, n_mes = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) >= inicio_mes)
 
     # 3. FLUJO DE DINERO GENERAL (Efectivo en mano)
     ingresos_totales_cash = db.session.query(func.sum(Movimiento.monto)).filter_by(
@@ -668,6 +676,7 @@ def reportes():
     porcentaje = (total_recuperado / total_inversion * 100) if total_inversion > 0 else 0
     faltante = max(0, total_inversion - total_recuperado)
 
+    # --- MODIFICACIÓN FINAL: Pasamos las variables n_hoy, n_semana y n_mes al HTML ---
     return render_template('reportes.html', 
                            inversion=total_inversion,
                            recuperado=total_recuperado,
@@ -684,9 +693,9 @@ def reportes():
                            labels_oro=labels_oro,
                            valores_oro=valores_oro,
                            ranking_oro=ranking_query,
-                           v_hoy=v_hoy, g_hoy=g_hoy,        # <--- NUEVO
-                           v_semana=v_semana, g_semana=g_semana, # <--- NUEVO
-                           v_mes=v_mes, g_mes=g_mes,        # <--- NUEVO
+                           v_hoy=v_hoy, g_hoy=g_hoy, n_hoy=n_hoy,
+                           v_semana=v_semana, g_semana=g_semana, n_semana=n_semana,
+                           v_mes=v_mes, g_mes=g_mes, n_mes=n_mes,
                            user=current_user)
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
