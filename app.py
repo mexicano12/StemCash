@@ -577,14 +577,20 @@ from sqlalchemy import func, text
 def reportes():
     f_id = current_user.familia_id
     
+    # --- CONFIGURACIÓN DE FECHAS (MÉXICO) ---
+    zona_mx = pytz.timezone('America/Mexico_City')
+    ahora_mx = datetime.now(zona_mx)
+    hoy = ahora_mx.date()
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    inicio_mes = hoy.replace(day=1)
+
     # 0. OBTENER TODOS LOS PRODUCTOS DE LA FAMILIA
     productos_familia = Producto.query.filter_by(familia_id=f_id).all()
 
-    # 1. SUMA DE INVERSIÓN (Movimientos de compra + Valor del Stock actual)
+    # 1. SUMA DE INVERSIÓN
     inv_movimientos = db.session.query(func.sum(MovimientoInventario.monto_total)).join(Producto).filter(
         MovimientoInventario.tipo.ilike('entrada'), Producto.familia_id == f_id
     ).scalar() or 0
-    
     inv_stock_inicial = sum([(p.stock * (p.precio_compra or 0)) for p in productos_familia])
     total_inversion = inv_movimientos + inv_stock_inicial
 
@@ -593,24 +599,44 @@ def reportes():
         MovimientoInventario.tipo.ilike('salida'), Producto.familia_id == f_id
     ).scalar() or 0
 
+    # --- 🏆 NUEVA SECCIÓN: RENDIMIENTO POR PERIODOS ---
+    def obtener_stats_periodo(filtro_fecha):
+        # Venta Bruta
+        venta = db.session.query(func.sum(MovimientoInventario.monto_total)).join(Producto).filter(
+            MovimientoInventario.tipo.ilike('salida'), 
+            Producto.familia_id == f_id,
+            filtro_fecha
+        ).scalar() or 0
+        # Ganancia Real (Venta - Costo)
+        ganancia = db.session.query(
+            func.sum(MovimientoInventario.monto_total - (Producto.precio_compra * MovimientoInventario.cantidad))
+        ).join(Producto).filter(
+            MovimientoInventario.tipo.ilike('salida'), 
+            Producto.familia_id == f_id,
+            filtro_fecha
+        ).scalar() or 0
+        return float(venta), float(ganancia)
+
+    v_hoy, g_hoy = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) == hoy)
+    v_semana, g_semana = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) >= inicio_semana)
+    v_mes, g_mes = obtener_stats_periodo(cast(MovimientoInventario.fecha, Date) >= inicio_mes)
+
     # 3. FLUJO DE DINERO GENERAL (Efectivo en mano)
     ingresos_totales_cash = db.session.query(func.sum(Movimiento.monto)).filter_by(
         familia_id=f_id, tipo='ingreso').scalar() or 0
-    
     gastos_totales_cash = db.session.query(func.sum(Movimiento.monto)).filter_by(
         familia_id=f_id, tipo='egreso').scalar() or 0
 
-    # 4. GASTOS POR CATEGORÍA (Para la Gráfica de Dona)
+    # 4. GASTOS POR CATEGORÍA
     gastos_cat_query = db.session.query(
         Categoria.nombre, func.sum(Movimiento.monto)
     ).join(Movimiento).filter(
         Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso'
     ).group_by(Categoria.nombre).all()
-    
     labels_gastos = [g[0] for g in gastos_cat_query]
     valores_gastos = [float(g[1]) for g in gastos_cat_query]
 
-    # 5. RENDIMIENTO POR MARCA/PLATAFORMA (Gráfica de Barras Actual)
+    # 5. RENDIMIENTO POR MARCA/PLATAFORMA
     ventas_agrupadas = db.session.query(
         Producto.plataforma, 
         func.sum(MovimientoInventario.monto_total)
@@ -618,11 +644,9 @@ def reportes():
         MovimientoInventario.tipo.ilike('salida'),
         Producto.familia_id == f_id
     ).group_by(Producto.plataforma).all()
-
     stats_categorias = [(cat if cat else "General", float(monto)) for cat, monto in ventas_agrupadas]
 
-    # --- 🏆 6. EL RANKING DE ORO: UTILIDAD NETA POR PRODUCTO (NUEVO) ---
-    # Calculamos: (Venta total - (Costo Compra * Cantidad)) para cada producto
+    # 6. EL RANKING DE ORO
     ranking_query = db.session.query(
         Producto.nombre,
         func.sum(MovimientoInventario.monto_total - (Producto.precio_compra * MovimientoInventario.cantidad)).label('ganancia_neta'),
@@ -631,12 +655,10 @@ def reportes():
         MovimientoInventario.tipo.ilike('salida'),
         Producto.familia_id == f_id
     ).group_by(Producto.nombre).order_by(text('ganancia_neta DESC')).limit(5).all()
-
     labels_oro = [r[0] for r in ranking_query]
     valores_oro = [float(r[1]) for r in ranking_query]
 
-    # 7. CÁLCULOS FINALES Y GANANCIA REAL TOTAL
-    # Usamos la suma de las utilidades de todas las ventas
+    # 7. CÁLCULOS FINALES
     ganancia_total_real = db.session.query(
         func.sum(MovimientoInventario.monto_total - (Producto.precio_compra * MovimientoInventario.cantidad))
     ).join(Producto).filter(
@@ -659,9 +681,12 @@ def reportes():
                            labels_g=labels_gastos,
                            valores_g=valores_gastos,
                            stats_categorias=stats_categorias,
-                           labels_oro=labels_oro,      # <--- NUEVO
-                           valores_oro=valores_oro,    # <--- NUEVO
-                           ranking_oro=ranking_query,  # <--- NUEVO
+                           labels_oro=labels_oro,
+                           valores_oro=valores_oro,
+                           ranking_oro=ranking_query,
+                           v_hoy=v_hoy, g_hoy=g_hoy,        # <--- NUEVO
+                           v_semana=v_semana, g_semana=g_semana, # <--- NUEVO
+                           v_mes=v_mes, g_mes=g_mes,        # <--- NUEVO
                            user=current_user)
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
