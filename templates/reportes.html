@@ -54,62 +54,71 @@
                 </div>
             </div>
 <div style="margin-bottom: 25px;">
-                <h3 style="font-size: 14px; color: #64748b; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">📊 Rendimiento por Periodos</h3>
-                <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                    
-                    <div class="card" style="border-top: 4px solid #3b82f6; padding: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span style="font-size: 11px; font-weight: bold; color: #64748b;">HOY</span>
-                            <span style="font-size: 14px;">📅</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <small style="color: #94a3b8;">Venta Total:</small>
-                                <strong style="font-size: 14px;">${{ "{:,.2f}".format(v_hoy) }}</strong>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <small style="color: #94a3b8;">Ganancia:</small>
-                                <strong style="font-size: 14px; color: #10b981;">+${{ "{:,.2f}".format(g_hoy) }}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card" style="border-top: 4px solid #f59e0b; padding: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span style="font-size: 11px; font-weight: bold; color: #64748b;">ESTA SEMANA</span>
-                            <span style="font-size: 14px;">🗓️</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <small style="color: #94a3b8;">Venta Total:</small>
-                                <strong style="font-size: 14px;">${{ "{:,.2f}".format(v_semana) }}</strong>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <small style="color: #94a3b8;">Ganancia:</small>
-                                <strong style="font-size: 14px; color: #10b981;">+${{ "{:,.2f}".format(g_semana) }}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card" style="border-top: 4px solid #8b5cf6; padding: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span style="font-size: 11px; font-weight: bold; color: #64748b;">ESTE MES</span>
-                            <span style="font-size: 14px;">🏢</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <small style="color: #94a3b8;">Venta Total:</small>
-                                <strong style="font-size: 14px;">${{ "{:,.2f}".format(v_mes) }}</strong>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <small style="color: #94a3b8;">Ganancia:</small>
-                                <strong style="font-size: 14px; color: #10b981;">+${{ "{:,.2f}".format(g_mes) }}</strong>
-                            </div>
-                        </div>
-                    </div>
-
+    <h3 style="font-size: 14px; color: #64748b; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">📊 Rendimiento por Periodos</h3>
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        
+        <div class="card" style="border-top: 4px solid #3b82f6; padding: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 11px; font-weight: bold; color: #64748b;">HOY</span>
+                <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">
+                    {{ n_hoy }} ventas
+                </span>
+                <span style="font-size: 14px;">📅</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color: #94a3b8;">Venta Total:</small>
+                    <strong style="font-size: 14px;">${{ "{:,.2f}".format(v_hoy) }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color: #94a3b8;">Ganancia:</small>
+                    <strong style="font-size: 14px; color: #10b981;">+${{ "{:,.2f}".format(g_hoy) }}</strong>
                 </div>
             </div>
+        </div>
+
+        <div class="card" style="border-top: 4px solid #f59e0b; padding: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 11px; font-weight: bold; color: #64748b;">ESTA SEMANA</span>
+                <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">
+                    {{ n_semana }} ventas
+                </span>
+                <span style="font-size: 14px;">🗓️</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color: #94a3b8;">Venta Total:</small>
+                    <strong style="font-size: 14px;">${{ "{:,.2f}".format(v_semana) }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color: #94a3b8;">Ganancia:</small>
+                    <strong style="font-size: 14px; color: #10b981;">+${{ "{:,.2f}".format(g_semana) }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="border-top: 4px solid #8b5cf6; padding: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 11px; font-weight: bold; color: #64748b;">ESTE MES</span>
+                <span style="background: #f3e8ff; color: #6b21a8; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">
+                    {{ n_mes }} ventas
+                </span>
+                <span style="font-size: 14px;">🏢</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color: #94a3b8;">Venta Total:</small>
+                    <strong style="font-size: 14px;">${{ "{:,.2f}".format(v_mes) }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color: #94a3b8;">Ganancia:</small>
+                    <strong style="font-size: 14px; color: #10b981;">+${{ "{:,.2f}".format(g_mes) }}</strong>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
             <div class="card" style="margin-bottom: 25px; border: 1px solid #ffe082; background: #fffdf7;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="margin:0; font-size: 15px;">⚖️ Punto de Equilibrio (Recuperación de Inversión)</h3>
