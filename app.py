@@ -79,9 +79,11 @@ with app.app_context():
 @login_required
 def dashboard():
     f_id = current_user.familia_id
+    
+    # --- REFUERZO DE TIEMPO (IMPORTANTE PARA RENDER) ---
     zona_mx = pytz.timezone('America/Mexico_City')
     ahora_mx = datetime.now(zona_mx)
-    hoy_date = ahora_mx.date()
+    hoy_date = ahora_mx.date() # Esto asegura que "Hoy" sea la fecha de México
     
     # Filtros de tiempo compatibles con Postgres y SQLite
     inicio_semana = hoy_date - timedelta(days=hoy_date.weekday())
@@ -94,11 +96,11 @@ def dashboard():
         Movimiento.familia_id == f_id, Movimiento.tipo == 'egreso').scalar() or 0
     balance = ingresos_totales - gastos_totales
 
-    # 2. Cálculos de hoy y semana
+    # 2. Cálculos de hoy y semana (USANDO hoy_date SEGURO)
     gastado_hoy = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id, 
         Movimiento.tipo == 'egreso',
-        cast(Movimiento.fecha, Date) == hoy_date
+        cast(Movimiento.fecha, Date) == hoy_date # Filtro exacto por fecha actual
     ).scalar() or 0
 
     gastado_semana = db.session.query(func.sum(Movimiento.monto)).filter(
@@ -113,7 +115,7 @@ def dashboard():
         cast(Movimiento.fecha, Date) >= inicio_mes
     ).scalar() or 0
     
-    # --- NUEVOS CÁLCULOS DE GASTOS SEPARADOS ---
+    # --- GASTOS SEPARADOS DEL MES ---
     gastos_mes_total = db.session.query(func.sum(Movimiento.monto)).filter(
         Movimiento.familia_id == f_id,
         Movimiento.tipo == 'egreso',
@@ -133,11 +135,11 @@ def dashboard():
     productos = Producto.query.filter_by(familia_id=f_id).all()
     valor_inventario_calculado = sum((p.stock or 0) * (p.precio_compra or 0) for p in productos)
 
-    # --- NUEVOS CÁLCULOS DE VENTA TOTAL VS GANANCIA ---
+    # --- VENTA TOTAL VS GANANCIA (CON REFUERZO DE FECHA) ---
     ventas_hoy = MovimientoInventario.query.join(Producto).filter(
         MovimientoInventario.tipo.ilike('salida'),
         Producto.familia_id == f_id,
-        cast(MovimientoInventario.fecha, Date) == hoy_date
+        cast(MovimientoInventario.fecha, Date) == hoy_date # Filtro exacto por fecha actual
     ).all()
 
     total_vendido_hoy = sum(v.monto_total for v in ventas_hoy)
@@ -151,7 +153,6 @@ def dashboard():
     movimientos = Movimiento.query.filter_by(familia_id=f_id).order_by(Movimiento.id.desc()).limit(10).all()
     categorias = Categoria.query.filter_by(familia_id=f_id).all()
 
-    # RETORNO CON TODAS TUS VARIABLES ORIGINALES + LAS NUEVAS
     return render_template('dashboard.html', 
                            balance_total=balance, 
                            ingresos_mes=ingresos_mes, 
