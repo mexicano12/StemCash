@@ -3,6 +3,12 @@
 **StemCash** es una plataforma web funcional diseñada para la gestión financiera personal y el control operativo de microempresas. El objetivo principal de este proyecto es resolver problemas reales de administración mediante una arquitectura de software robusta, lógica de negocio sólida y automatización de reportes clave.
 
 🚀 **Link del proyecto desplegado:** [stemcash.onrender.com](https://stemcash.onrender.com)
+## ✨ Características Principales
+
+* **Gestión Financiera Centralizada:** Registro y control de ingresos, gastos y flujos de efectivo en tiempo real.
+* **Módulo de Inventarios y Ventas:** Control operativo de existencias con actualización automatizada tras cada transacción comercial.
+* **Lógica Multiusuario:** Soporte estructurado para cuentas familiares o empresariales, garantizando el aislamiento de datos y el cálculo preciso de saldos.
+* **Reportes Automatizados:** Generación automática de métricas de rendimiento financiero para facilitar la toma de decisiones estratégicas.
 
 ---
 
