@@ -1,6 +1,8 @@
-# StemCash 🚀
+# StemCash 💰
 
-StemCash es una aplicación web diseñada para la gestión, control y monetización eficiente de proyectos digitales, proporcionando un dashboard intuitivo y una estructura backend sólida para el seguimiento de operaciones.
+**StemCash** es una plataforma web funcional diseñada para la gestión financiera personal y el control operativo de microempresas. El objetivo principal de este proyecto es resolver problemas reales de administración mediante una arquitectura de software robusta, lógica de negocio sólida y automatización de reportes clave.
+
+🚀 **Link del proyecto desplegado:** [stemcash.onrender.com](https://stemcash.onrender.com)
 
 ---
 
